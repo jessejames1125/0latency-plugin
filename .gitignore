@@ -2,3 +2,6 @@ node_modules/
 *.log
 sessions/
 .env
+
+# stray test-output redirects (Windows-path names from Git Bash)
+*task-*-test-output.txt
