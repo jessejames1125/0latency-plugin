@@ -1,0 +1,156 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>0latency — capture</title>
+<style>
+  body { margin: 0; font: 14px system-ui, sans-serif; background: #0d0f14; color: #e8e8e8; display: flex; flex-direction: column; align-items: center; gap: 12px; padding: 16px; }
+  #light { width: 14px; height: 14px; border-radius: 50%; background: #555; display: inline-block; vertical-align: middle; }
+  #light.on { background: #35c759; box-shadow: 0 0 8px #35c759; }
+  #stage { position: relative; max-width: 100%; }
+  canvas, video { max-width: 100%; border: 1px solid #222; display: block; }
+  #freeze { position: absolute; inset: 0; cursor: crosshair; display: none; }
+  button { font: inherit; padding: 8px 16px; background: #e8a045; color: #111; border: 0; border-radius: 6px; cursor: pointer; }
+  .hint { color: #888; font-size: 12px; }
+</style>
+<div><span id="light"></span> <span id="status">idle</span></div>
+<div id="stage">
+  <video id="preview" autoplay muted playsinline></video>
+  <canvas id="freeze"></canvas>
+</div>
+<label class="hint">input:
+  <select id="src">
+    <option value="both">mic + Meet tab (share the MEET TAB with "share tab audio" ON)</option>
+    <option value="system">system only (remote participants)</option>
+    <option value="mic">mic only (in-person)</option>
+  </select>
+</label>
+<button id="btn">Start capture</button>
+<div class="hint">Sensor only. A grab freezes the frame ~5s — drag once to box what you're pointing at. Click the preview to grab a frame.</div>
+<script src="frame-diff.js"></script>
+<script>
+const $ = (id) => document.getElementById(id);
+let ws, audioCtx, micStream, dispStream, capturing = false;
+const WORKLET = `class P extends AudioWorkletProcessor{process(i){const f=i[0];if(!f||!f[0])return true;const s=f[0],o=new Int16Array(s.length);for(let i=0;i<s.length;i++){const v=Math.max(-1,Math.min(1,s[i]));o[i]=v<0?v*0x8000:v*0x7FFF;}this.port.postMessage(o);return true;}}registerProcessor('pcm',P);`;
+
+function connectWS() {
+  ws = new WebSocket('ws://' + location.host);
+  ws.onmessage = (e) => { try { const m = JSON.parse(e.data); if (m.type === 'grab') grab('button'); } catch {} };
+}
+function send(o) { if (ws && ws.readyState === 1) ws.send(JSON.stringify(o)); }
+
+async function start() {
+  const SRC = new URLSearchParams(location.search).get('source') || $('src').value || 'both';
+  $('src').value = SRC;
+  const wantSystem = SRC === 'both' || SRC === 'system';
+  const wantMic = SRC === 'both' || SRC === 'mic';
+  connectWS();
+  dispStream = wantSystem ? await navigator.mediaDevices.getDisplayMedia({ video: true, audio: true }) : null;
+  if (dispStream) $('preview').srcObject = new MediaStream(dispStream.getVideoTracks());
+  try { micStream = wantMic ? await navigator.mediaDevices.getUserMedia({ audio: true, video: false }) : null; } catch { micStream = null; }
+  audioCtx = new AudioContext({ sampleRate: 16000 });
+  await audioCtx.audioWorklet.addModule(URL.createObjectURL(new Blob([WORKLET], { type: 'application/javascript' })));
+  const TAG_MIC = 1, TAG_SYS = 2;
+  function attach(stream, tagByte) {
+    const a = stream && stream.getAudioTracks && stream.getAudioTracks();
+    if (!a || !a.length) return;
+    const node = new AudioWorkletNode(audioCtx, 'pcm');
+    node.port.onmessage = (e) => {
+      if (!ws || ws.readyState !== 1) return;
+      const pcm = new Uint8Array(e.data.buffer);
+      const framed = new Uint8Array(pcm.length + 1);
+      framed[0] = tagByte;
+      framed.set(pcm, 1);
+      ws.send(framed.buffer);
+    };
+    audioCtx.createMediaStreamSource(new MediaStream(a)).connect(node);
+  }
+  attach(micStream, TAG_MIC);
+  attach(dispStream, TAG_SYS);
+  send({ type: 'capture_start', source: 'screen' });
+  capturing = true; $('light').className = 'on'; $('status').textContent = 'capturing'; $('btn').textContent = 'Stop';
+  startSampler();
+}
+function stop() {
+  stopSampler();
+  send({ type: 'capture_stop' });
+  if (dispStream) dispStream.getTracks().forEach((t) => t.stop());
+  if (micStream) micStream.getTracks().forEach((t) => t.stop());
+  if (audioCtx) audioCtx.close();
+  capturing = false; $('light').className = ''; $('status').textContent = 'stopped'; $('btn').textContent = 'Start capture';
+}
+
+// ── Change-triggered capture (Phase 11 T043/T044) ─────────────────────────────
+// Sample the video ~1/s, downscale to 8x8 grayscale, and keep a frame only on material change
+// (FrameDiff avg-hash). A static screen keeps one frame; the hotkey remains a manual force-keep.
+let sampler = null, detector = null;
+function startSampler() {
+  const q = new URLSearchParams(location.search);
+  const changeThreshold = parseInt(q.get('change_threshold') || '10', 10);
+  const minIntervalMs = Math.round(parseFloat(q.get('min_interval_s') || '2') * 1000);
+  const maxFps = parseFloat(q.get('max_fps') || '1') || 1;
+  detector = FrameDiff.createChangeDetector({ changeThreshold, minIntervalMs });
+  const small = document.createElement('canvas'); small.width = 8; small.height = 8;
+  const sctx = small.getContext('2d', { willReadFrequently: true });
+  sampler = setInterval(() => {
+    const v = $('preview');
+    if (!capturing || !v.videoWidth) return;           // mic-only (no video) → nothing to sample
+    sctx.drawImage(v, 0, 0, 8, 8);
+    const px = sctx.getImageData(0, 0, 8, 8).data;
+    const g = new Uint8Array(64);
+    for (let i = 0; i < 64; i++) g[i] = (px[i * 4] * 0.299 + px[i * 4 + 1] * 0.587 + px[i * 4 + 2] * 0.114) | 0;
+    if (detector.consider(g, performance.now())) captureChangeFrame();
+  }, Math.max(200, Math.round(1000 / maxFps)));
+}
+function stopSampler() { if (sampler) clearInterval(sampler); sampler = null; detector = null; }
+function captureChangeFrame() {
+  const v = $('preview');
+  if (!v.videoWidth) return;
+  const c = document.createElement('canvas'); c.width = v.videoWidth; c.height = v.videoHeight;
+  c.getContext('2d').drawImage(v, 0, 0, c.width, c.height);
+  fetch('/frame', { method: 'POST', headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ raw: c.toDataURL('image/png'), trigger: 'change' }) }).catch(() => {});
+}
+$('btn').onclick = () => (capturing ? stop() : start().catch((e) => { $('status').textContent = 'error: ' + e.message; }));
+
+// ── Frame grab + one-drag highlight (client-side composite; §5.3) ────────────
+const fc = $('freeze'), fctx = fc.getContext('2d');
+let drag = null, freezeTimer = null;
+function grab() {
+  const v = $('preview');
+  if (!v.videoWidth) return;
+  fc.width = v.videoWidth; fc.height = v.videoHeight;
+  fctx.drawImage(v, 0, 0, fc.width, fc.height);
+  fc.style.display = 'block';
+  clearTimeout(freezeTimer);
+  freezeTimer = setTimeout(() => finishGrab(null), 5000); // no drag → raw frame only
+}
+function relRect(e) {
+  const r = fc.getBoundingClientRect();
+  return { x: (e.clientX - r.left) / r.width * fc.width, y: (e.clientY - r.top) / r.height * fc.height };
+}
+fc.addEventListener('mousedown', (e) => { drag = { s: relRect(e) }; });
+$('preview').addEventListener('mousedown', (e) => { if (!capturing) return; grab(); drag = { s: relRect(e) }; });
+fc.addEventListener('mousemove', (e) => {
+  if (!drag) return;
+  const p = relRect(e);
+  const v = $('preview');
+  fctx.drawImage(v, 0, 0, fc.width, fc.height);
+  fctx.strokeStyle = '#ff3b30'; fctx.lineWidth = Math.max(2, fc.width / 300);
+  fctx.strokeRect(drag.s.x, drag.s.y, p.x - drag.s.x, p.y - drag.s.y);
+});
+fc.addEventListener('mouseup', (e) => {
+  if (!drag) return finishGrab(null);
+  const p = relRect(e);
+  const x = Math.min(drag.s.x, p.x), y = Math.min(drag.s.y, p.y), w = Math.abs(p.x - drag.s.x), h = Math.abs(p.y - drag.s.y);
+  finishGrab(w > 3 && h > 3 ? { x: x / fc.width, y: y / fc.height, w: w / fc.width, h: h / fc.height } : null);
+});
+function finishGrab(highlight) {
+  clearTimeout(freezeTimer); drag = null;
+  const v = $('preview');
+  const rawC = document.createElement('canvas'); rawC.width = fc.width; rawC.height = fc.height;
+  rawC.getContext('2d').drawImage(v, 0, 0, fc.width, fc.height);
+  const payload = { raw: rawC.toDataURL('image/png'), trigger: 'button' };
+  if (highlight) { payload.highlight = highlight; payload.highlighted = fc.toDataURL('image/png'); } // the boxed composite
+  fetch('/frame', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(payload) }).catch(() => {});
+  fc.style.display = 'none';
+}
+</script>
