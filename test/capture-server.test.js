@@ -43,3 +43,14 @@ test('serves the sensor page, accepts tagged audio, routes control, writes frame
   ws.close();
   await srv.stop();
 });
+
+test('a second server on an already-listening fixed port rejects readably instead of crashing (EADDRINUSE, log-and-continue)', async () => {
+  const dir1 = mkSession();
+  const dir2 = mkSession();
+  const srv1 = await startCaptureServer(dir1, { port: 0, onAudio: () => {}, onControl: () => {} });
+  await assert.rejects(
+    startCaptureServer(dir2, { port: srv1.port, onAudio: () => {}, onControl: () => {} }),
+    /failed to start on port/,
+  );
+  await srv1.stop();
+});

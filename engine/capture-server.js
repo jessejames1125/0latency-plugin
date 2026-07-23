@@ -58,10 +58,14 @@ function startCaptureServer(sessionDir, { port, onAudio, onControl }) {
     res.writeHead(404); res.end();
   });
 
+  server.on('error', (e) => console.error('[capture] server error:', e.message));
+
   const wss = new WebSocketServer({ server });
+  wss.on('error', (e) => console.error('[capture] websocket server error:', e.message));
   let client = null;
   wss.on('connection', (ws) => {
     client = ws;
+    ws.on('error', (e) => console.error('[capture] client socket error:', e.message));
     ws.on('message', (data, isBinary) => {
       if (isBinary) {
         const buf = Buffer.from(data);
@@ -74,8 +78,14 @@ function startCaptureServer(sessionDir, { port, onAudio, onControl }) {
     ws.on('close', () => { if (client === ws) client = null; });
   });
 
-  return new Promise((resolve) => {
+  return new Promise((resolve, reject) => {
+    // Bind the listen-time error handler BEFORE calling listen() so an EADDRINUSE (e.g. a
+    // stale engine already holding the port) rejects this promise with a readable message
+    // instead of throwing uncaught and killing the process — log and continue, even at startup.
+    const onListenError = (e) => reject(new Error(`[capture] failed to start on port ${port}: ${e.message}`));
+    server.once('error', onListenError);
     server.listen(port, '127.0.0.1', () => {
+      server.removeListener('error', onListenError);
       const actual = server.address().port;
       resolve({
         port: actual,

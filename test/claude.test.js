@@ -45,3 +45,19 @@ test('runClaude resolves via an injected fake spawn', async () => {
   const res = await runClaude({ prompt: 'x', model: 'sonnet', allowedTools: ['Read'], spawnFn: fakeSpawn });
   assert.strictEqual(res, '[]');
 });
+
+test('runClaude NEVER passes shell:true — argv must reach the child unshredded (Windows DEP0190)', async () => {
+  const { EventEmitter } = require('node:events');
+  let seenOptions = null;
+  function fakeSpawn(cmd, args, options) {
+    seenOptions = options;
+    const c = new EventEmitter();
+    c.stdout = new EventEmitter(); c.stderr = new EventEmitter();
+    c.stdin = { write() {}, end() {} };
+    setImmediate(() => { c.stdout.emit('data', '{"result":"[]","is_error":false}'); c.emit('close', 0); });
+    return c;
+  }
+  await runClaude({ prompt: 'x', model: 'sonnet', allowedTools: EVENT_TOOLS, spawnFn: fakeSpawn });
+  assert.ok(seenOptions, 'spawnFn was called with an options object');
+  assert.ok(!seenOptions.shell, 'shell must be falsy so multi-word args are never shell-concatenated');
+});
