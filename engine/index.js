@@ -70,8 +70,9 @@ async function start(flags) {
   const caps = createCaps(path.join(sessionDir, 'state'), cfg.caps);
   const firing = createFiring({
     sessionDir, config: cfg, caps, template, meetingId, meetingTitle: title, startT, notesDir,
-    // Data-only session: NO tools (DENY_TOOLS turns them off). The engine does gh/git/fs itself.
-    runSession: (prompt) => runClaude({ prompt, model: cfg.models.events, disallowedTools: DENY_TOOLS }),
+    // Data-only session: NO tools (DENY_TOOLS turns them off), NO MCP, NO inherited operator
+    // settings/hooks. cwd = sessionDir (has no .claude/) so --setting-sources project loads nothing.
+    runSession: (prompt) => runClaude({ prompt, model: cfg.models.events, disallowedTools: DENY_TOOLS, cwd: sessionDir }),
   });
 
   let mic = null, sys = null, captureStartedT = null, lastUtteranceT = null;

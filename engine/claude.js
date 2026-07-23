@@ -71,8 +71,19 @@ const DENY_TOOLS = [
 
 const stripFences = (s) => String(s).replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/, '').trim();
 
+// The event session is deliberately isolated from the operator's ambient Claude Code environment,
+// which we do NOT control and which differs per machine/person:
+//   --disallowedTools DENY_TOOLS  : deny every built-in that can read/write/execute/network.
+//   --strict-mcp-config           : load NO MCP servers (the deny-list can't enumerate the
+//                                   operator's mcp__* tools; this removes them wholesale).
+//   --setting-sources project     : do NOT load user/local settings — that's where SessionStart
+//                                   hooks (any operator's boot greeting), output styles, and
+//                                   permissive allow-rules live. Combined with a clean cwd (the
+//                                   session dir, which has no .claude/), the session inherits
+//                                   nothing operator-specific.
+//   --append-system-prompt GUARD  : belt-and-suspenders against stray preamble.
 function buildArgs({ model, disallowedTools = [] }) {
-  const args = ['-p', '--output-format', 'json', '--model', model];
+  const args = ['-p', '--output-format', 'json', '--model', model, '--strict-mcp-config', '--setting-sources', 'project'];
   if (disallowedTools.length) args.push('--disallowedTools', ...disallowedTools);
   args.push('--append-system-prompt', OUTPUT_GUARD);
   return args;

@@ -19,6 +19,10 @@ test('buildArgs carries -p, json output, model, and disables every side-effect t
   for (const t of ['Bash', 'Read', 'Write', 'Edit', 'WebFetch']) assert.ok(args.includes(t), `${t} must be disallowed`);
   // And crucially the session is NOT granted any tools.
   assert.ok(!args.includes('--allowedTools'), 'a data-only session grants no tools');
+  // Isolation from the operator's ambient environment (any machine, any person's hooks/MCP).
+  assert.ok(args.includes('--strict-mcp-config'), 'no operator MCP servers reach the session');
+  const si = args.indexOf('--setting-sources');
+  assert.ok(si >= 0 && args[si + 1] === 'project', 'user/local settings (hooks, output styles, allow-rules) are not inherited');
 });
 
 test('DENY_TOOLS covers the read/write/execute/network built-ins', () => {
