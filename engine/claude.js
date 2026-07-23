@@ -1,8 +1,9 @@
 'use strict';
-// Scoped headless Claude spawner. THE central rule of this repo: no spawn, ever, uses
-// --dangerously-skip-permissions. Event sessions get exactly EVENT_TOOLS and nothing else.
-// parseClaudeOutput + OUTPUT_GUARD copied from 0latency pipeline/llm.js (hooks print before
-// the JSON envelope; read the envelope's `result`, never raw stdout).
+// Headless Claude spawner. THE central rule of this repo: no spawn, ever, uses
+// --dangerously-skip-permissions. Event sessions are DATA-ONLY — every side-effect tool is
+// disabled via --disallowedTools (DENY_TOOLS), because --allowedTools does not sandbox (see
+// the SECURITY note below). parseClaudeOutput + OUTPUT_GUARD copied from 0latency pipeline/llm.js
+// (hooks print before the JSON envelope; read the envelope's `result`, never raw stdout).
 const { spawn, execFileSync } = require('child_process');
 
 // Resolve the claude binary WITHOUT shell:true. `shell:true` makes Node join argv with
@@ -56,24 +57,30 @@ const OUTPUT_GUARD =
   + 'and do not add a preamble, a persona, a status line, or repository information. '
   + 'Your entire reply is the requested content and nothing else.';
 
-const EVENT_TOOLS = [
-  'Read',
-  'Bash(cp:*)', 'Bash(mkdir:*)', 'Bash(sleep:*)',
-  'Bash(git add:*)', 'Bash(git commit:*)', 'Bash(git push:*)', 'Bash(git pull:*)', 'Bash(git rev-parse:*)',
-  'Bash(gh label create:*)', 'Bash(gh issue create:*)', 'Bash(gh issue list:*)', 'Bash(gh api:*)',
+// SECURITY (2026-07-23): `--allowedTools` does NOT sandbox — proven empirically, it pre-approves
+// listed tools but the session still inherits the operator's ambient permissions and can read
+// files / run commands never in the list. So event sessions get NO tools and produce DATA ONLY;
+// the engine performs every side effect (gh, git, fs) deterministically. `--disallowedTools`
+// DOES turn tools off (proven), so we deny every built-in that could read/write/execute/network —
+// defence in depth against prompt-injection from untrusted meeting audio. See the design doc's
+// CRITICAL SECURITY FINDING banner.
+const DENY_TOOLS = [
+  'Bash', 'Read', 'Write', 'Edit', 'MultiEdit', 'NotebookEdit',
+  'Glob', 'Grep', 'WebFetch', 'WebSearch', 'Task', 'BashOutput', 'KillShell',
 ];
 
 const stripFences = (s) => String(s).replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/, '').trim();
 
-function buildArgs({ model, allowedTools }) {
-  return ['-p', '--output-format', 'json', '--model', model,
-    '--allowedTools', ...allowedTools,
-    '--append-system-prompt', OUTPUT_GUARD];
+function buildArgs({ model, disallowedTools = [] }) {
+  const args = ['-p', '--output-format', 'json', '--model', model];
+  if (disallowedTools.length) args.push('--disallowedTools', ...disallowedTools);
+  args.push('--append-system-prompt', OUTPUT_GUARD);
+  return args;
 }
 
-function runClaude({ prompt, model, allowedTools, spawnFn = spawn, cwd }) {
+function runClaude({ prompt, model, disallowedTools = [], spawnFn = spawn, cwd }) {
   return new Promise((resolve, reject) => {
-    const child = spawnFn(resolveClaudeBin(), buildArgs({ model, allowedTools }),
+    const child = spawnFn(resolveClaudeBin(), buildArgs({ model, disallowedTools }),
       { shell: false, cwd, stdio: ['pipe', 'pipe', 'pipe'] });
     let out = '', err = '';
     child.stdout.on('data', (d) => { out += d; });
@@ -90,4 +97,4 @@ function runClaude({ prompt, model, allowedTools, spawnFn = spawn, cwd }) {
   });
 }
 
-module.exports = { runClaude, buildArgs, parseClaudeOutput, stripFences, EVENT_TOOLS, OUTPUT_GUARD, resolveClaudeBin };
+module.exports = { runClaude, buildArgs, parseClaudeOutput, stripFences, DENY_TOOLS, OUTPUT_GUARD, resolveClaudeBin };

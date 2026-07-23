@@ -1,22 +1,30 @@
 'use strict';
 const test = require('node:test');
 const assert = require('node:assert');
-const { buildArgs, parseClaudeOutput, runClaude, stripFences, EVENT_TOOLS } = require('../engine/claude');
+const { buildArgs, parseClaudeOutput, runClaude, stripFences, DENY_TOOLS } = require('../engine/claude');
 
 test('buildArgs NEVER contains --dangerously-skip-permissions (hard project constraint)', () => {
-  const args = buildArgs({ model: 'sonnet', allowedTools: EVENT_TOOLS });
+  const args = buildArgs({ model: 'sonnet', disallowedTools: DENY_TOOLS });
   assert.ok(!args.includes('--dangerously-skip-permissions'));
   assert.ok(!args.some((a) => /dangerously/.test(a)));
 });
 
-test('buildArgs carries -p, json output, model, and every allowed tool', () => {
-  const args = buildArgs({ model: 'sonnet', allowedTools: ['Read', 'Bash(gh issue create:*)'] });
+test('buildArgs carries -p, json output, model, and disables every side-effect tool', () => {
+  const args = buildArgs({ model: 'sonnet', disallowedTools: DENY_TOOLS });
   assert.ok(args.includes('-p'));
   assert.ok(args.includes('--output-format') && args.includes('json'));
   assert.ok(args.includes('--model') && args.includes('sonnet'));
-  const i = args.indexOf('--allowedTools');
-  assert.ok(i >= 0);
-  assert.ok(args.includes('Bash(gh issue create:*)'));
+  assert.ok(args.includes('--disallowedTools'), 'must pass --disallowedTools (the only flag proven to turn tools OFF)');
+  // The tools an injected transcript could weaponise are all denied.
+  for (const t of ['Bash', 'Read', 'Write', 'Edit', 'WebFetch']) assert.ok(args.includes(t), `${t} must be disallowed`);
+  // And crucially the session is NOT granted any tools.
+  assert.ok(!args.includes('--allowedTools'), 'a data-only session grants no tools');
+});
+
+test('DENY_TOOLS covers the read/write/execute/network built-ins', () => {
+  for (const t of ['Bash', 'Read', 'Write', 'Edit', 'MultiEdit', 'Glob', 'Grep', 'WebFetch', 'WebSearch', 'Task']) {
+    assert.ok(DENY_TOOLS.includes(t), `${t} must be in DENY_TOOLS`);
+  }
 });
 
 test('parseClaudeOutput reads the LAST result envelope past hook noise', () => {
@@ -33,31 +41,27 @@ test('stripFences unwraps ```json fences', () => {
   assert.strictEqual(stripFences('```json\n[1,2]\n```'), '[1,2]');
 });
 
-test('runClaude resolves via an injected fake spawn', async () => {
+function fakeSpawnFactory(capture) {
   const { EventEmitter } = require('node:events');
-  function fakeSpawn() {
+  return function fakeSpawn(cmd, args, options) {
+    if (capture) { capture.args = args; capture.options = options; }
     const c = new EventEmitter();
     c.stdout = new EventEmitter(); c.stderr = new EventEmitter();
     c.stdin = { write() {}, end() {} };
     setImmediate(() => { c.stdout.emit('data', '{"result":"[]","is_error":false}'); c.emit('close', 0); });
     return c;
-  }
-  const res = await runClaude({ prompt: 'x', model: 'sonnet', allowedTools: ['Read'], spawnFn: fakeSpawn });
+  };
+}
+
+test('runClaude resolves via an injected fake spawn', async () => {
+  const res = await runClaude({ prompt: 'x', model: 'sonnet', disallowedTools: DENY_TOOLS, spawnFn: fakeSpawnFactory() });
   assert.strictEqual(res, '[]');
 });
 
 test('runClaude NEVER passes shell:true — argv must reach the child unshredded (Windows DEP0190)', async () => {
-  const { EventEmitter } = require('node:events');
-  let seenOptions = null;
-  function fakeSpawn(cmd, args, options) {
-    seenOptions = options;
-    const c = new EventEmitter();
-    c.stdout = new EventEmitter(); c.stderr = new EventEmitter();
-    c.stdin = { write() {}, end() {} };
-    setImmediate(() => { c.stdout.emit('data', '{"result":"[]","is_error":false}'); c.emit('close', 0); });
-    return c;
-  }
-  await runClaude({ prompt: 'x', model: 'sonnet', allowedTools: EVENT_TOOLS, spawnFn: fakeSpawn });
-  assert.ok(seenOptions, 'spawnFn was called with an options object');
-  assert.ok(!seenOptions.shell, 'shell must be falsy so multi-word args are never shell-concatenated');
+  const cap = {};
+  await runClaude({ prompt: 'x', model: 'sonnet', disallowedTools: DENY_TOOLS, spawnFn: fakeSpawnFactory(cap) });
+  assert.ok(cap.options, 'spawnFn was called with an options object');
+  assert.ok(!cap.options.shell, 'shell must be falsy so multi-word args are never shell-concatenated');
+  assert.ok(cap.args.includes('--disallowedTools'), 'the real invocation disables tools');
 });
