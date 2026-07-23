@@ -3,7 +3,27 @@
 // --dangerously-skip-permissions. Event sessions get exactly EVENT_TOOLS and nothing else.
 // parseClaudeOutput + OUTPUT_GUARD copied from 0latency pipeline/llm.js (hooks print before
 // the JSON envelope; read the envelope's `result`, never raw stdout).
-const { spawn } = require('child_process');
+const { spawn, execFileSync } = require('child_process');
+
+// Resolve the claude binary WITHOUT shell:true. `shell:true` makes Node join argv with
+// spaces and no quoting (Node DEP0190) — that shreds multi-word --allowedTools entries like
+// `Bash(git add:*)` and the long --append-system-prompt guard on every Windows spawn. So we
+// always spawn with shell:false and instead resolve the actual executable path/name here:
+// CLAUDE_BIN env wins if set; on win32 `spawn` with shell:false won't consult PATHEXT, so we
+// ask `where` for the first of claude.cmd/claude.exe/claude that resolves, falling back to
+// the bare literal (which will fail loudly rather than silently misbehave) if none do.
+function resolveClaudeBin() {
+  if (process.env.CLAUDE_BIN) return process.env.CLAUDE_BIN;
+  if (process.platform !== 'win32') return 'claude';
+  for (const candidate of ['claude.cmd', 'claude.exe', 'claude']) {
+    try {
+      const out = execFileSync('where', [candidate], { stdio: ['ignore', 'pipe', 'ignore'] }).toString();
+      const first = out.split(/\r?\n/).find(Boolean);
+      if (first) return first.trim();
+    } catch { /* not found on PATH, try next */ }
+  }
+  return 'claude';
+}
 
 // `claude -p` is a full Claude Code session and inherits the operator's global config, so a
 // SessionStart hook's greeting arrives on stdout ahead of the answer. Read the JSON envelope's
@@ -53,8 +73,8 @@ function buildArgs({ model, allowedTools }) {
 
 function runClaude({ prompt, model, allowedTools, spawnFn = spawn, cwd }) {
   return new Promise((resolve, reject) => {
-    const child = spawnFn('claude', buildArgs({ model, allowedTools }),
-      { shell: process.platform === 'win32', cwd, stdio: ['pipe', 'pipe', 'pipe'] });
+    const child = spawnFn(resolveClaudeBin(), buildArgs({ model, allowedTools }),
+      { shell: false, cwd, stdio: ['pipe', 'pipe', 'pipe'] });
     let out = '', err = '';
     child.stdout.on('data', (d) => { out += d; });
     child.stderr.on('data', (d) => { err += d; });
@@ -70,4 +90,4 @@ function runClaude({ prompt, model, allowedTools, spawnFn = spawn, cwd }) {
   });
 }
 
-module.exports = { runClaude, buildArgs, parseClaudeOutput, stripFences, EVENT_TOOLS, OUTPUT_GUARD };
+module.exports = { runClaude, buildArgs, parseClaudeOutput, stripFences, EVENT_TOOLS, OUTPUT_GUARD, resolveClaudeBin };

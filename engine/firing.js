@@ -35,6 +35,8 @@ function createFiring({ sessionDir, config, caps, runSession, template, meetingI
   const context = [];   // rolling recent utterances (3 min window)
   const frames = [];    // all frame events so far
   let saidExecStub = false;
+  let ticking = false;  // in-flight guard: a slow runSession must not overlap the next tick
+                         // and spawn a second concurrent event session (double token spend)
 
   function onUtterance(ev) {
     context.push(ev);
@@ -51,28 +53,35 @@ function createFiring({ sessionDir, config, caps, runSession, template, meetingI
   }
 
   async function tick() {
-    if (config.execution === 'on' && !saidExecStub) {
-      saidExecStub = true;
-      log.log('[0l] execution=on is not implemented in v0.1 (Phase 2) — issues are created only');
-    }
-    if (!pending.length) return;
-    const batch = pending.splice(0);
-    if (config.creation !== 'auto') return drainToQueue(batch);
-    if (!caps.take('events')) return; // caps logs the reason
+    if (ticking) return; // previous tick's runSession is still in flight — candidates stay
+                          // in `pending` for the following tick, never a second concurrent spawn
+    ticking = true;
     try {
-      const reply = await runSession(buildEventPrompt({
-        template, meetingId, meetingTitle, batch, context: context.slice(), frames: frames.slice(),
-        config, notesDir, startT,
-      }));
-      const parsed = JSON.parse(stripFences(String(reply)));
-      for (const r of Array.isArray(parsed) ? parsed : []) {
-        if (r && r.url) {
-          appendEvent(eventsPath, { type: 'action_taken', title: r.title, repo: r.repo, url: r.url, frame: r.frame || null });
-          log.log(`[0l] issue filed: ${r.title} -> ${r.url}`);
-        }
+      if (config.execution === 'on' && !saidExecStub) {
+        saidExecStub = true;
+        log.log('[0l] execution=on is not implemented in v0.1 (Phase 2) — issues are created only');
       }
-    } catch (e) {
-      log.error('[0l] event session failed (batch dropped, meeting continues):', e.message);
+      if (!pending.length) return;
+      const batch = pending.splice(0);
+      if (config.creation !== 'auto') return drainToQueue(batch);
+      if (!caps.take('events')) return; // caps logs the reason
+      try {
+        const reply = await runSession(buildEventPrompt({
+          template, meetingId, meetingTitle, batch, context: context.slice(), frames: frames.slice(),
+          config, notesDir, startT,
+        }));
+        const parsed = JSON.parse(stripFences(String(reply)));
+        for (const r of Array.isArray(parsed) ? parsed : []) {
+          if (r && r.url) {
+            appendEvent(eventsPath, { type: 'action_taken', title: r.title, repo: r.repo, url: r.url, frame: r.frame || null });
+            log.log(`[0l] issue filed: ${r.title} -> ${r.url}`);
+          }
+        }
+      } catch (e) {
+        log.error('[0l] event session failed (batch dropped, meeting continues):', e.message);
+      }
+    } finally {
+      ticking = false;
     }
   }
 

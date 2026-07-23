@@ -7,7 +7,7 @@ const os = require('os');
 const path = require('path');
 const { spawn } = require('child_process');
 const { loadConfig } = require('./config');
-const { appendEvent, readEvents } = require('./spine');
+const { appendEvent, readEvents, tailEvents } = require('./spine');
 const { slugify, today, elapsedHHMMSS } = require('./util');
 const { createStream } = require('./deepgram');
 const { startCaptureServer } = require('./capture-server');
@@ -86,8 +86,9 @@ async function start(flags) {
     port: cfg.port,
     onAudio: (tag, buf) => { if (tag === 1 && mic) mic.sendAudio(buf); else if (tag === 2 && sys) sys.sendAudio(buf); },
     onControl: (msg) => {
-      if (msg.type === 'capture_start' && !captureStartedT) {
-        captureStartedT = Date.now();
+      if (msg.type === 'capture_start') {
+        if (mic || sys) return; // already active — do nothing
+        if (!captureStartedT) captureStartedT = Date.now(); // idle-clock baseline, set once
         mic = createStream({ key: cfg.deepgram_key, diarize: false, label: cfg.operator_label, onUtterance });
         sys = createStream({ key: cfg.deepgram_key, diarize: true, label: null, onUtterance });
         console.log('[0l] capture started (two streams: mic + Meet tab)');
@@ -106,12 +107,12 @@ async function start(flags) {
     else spawn('xdg-open', [url], { detached: true, stdio: 'ignore' });
   } catch { /* operator opens it manually */ }
 
-  // frame events reach the firing loop by tailing our own spine (server appends them)
-  let seenEvents = 0;
+  // frame events reach the firing loop by tailing our own spine (server appends them).
+  // tailEvents is byte-offset resumable and per-line tolerant — a mid-write partial line
+  // never blanks out the whole file the way readEvents' whole-file try/catch would.
+  const tailOffsetPath = path.join(sessionDir, 'state', 'frame-tail.offset');
   const tailTimer = setInterval(() => {
-    const evs = readEvents(eventsPath);
-    for (; seenEvents < evs.length; seenEvents++) {
-      const e = evs[seenEvents];
+    for (const e of tailEvents(eventsPath, tailOffsetPath)) {
       if (e.type === 'frame') firing.onFrame(Object.assign({}, e, { path: path.join(sessionDir, e.path) }));
     }
   }, 2000);

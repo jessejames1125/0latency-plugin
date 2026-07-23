@@ -69,6 +69,26 @@ test('a session that throws or returns junk is logged and dropped, never crashes
   assert.strictEqual(readEvents(path.join(dir, 'events.jsonl')).filter((e) => e.type === 'action_taken').length, 0);
 });
 
+test('overlapping tick() calls never spawn a second concurrent session (in-flight guard)', async () => {
+  const dir = mkSession();
+  let spawned = 0;
+  let resolveSession;
+  const gate = new Promise((r) => { resolveSession = r; });
+  const f = createFiring({ sessionDir: dir, config: CFG, caps: createCaps(path.join(dir, 'state'), { events: 20 }, { log() {}, error() {} }),
+    runSession: async (p) => { spawned++; await gate; return JSON.stringify([{ title: 'Fix export button', repo: 'acme/app', url: 'https://github.com/acme/app/issues/9', frame: null }]); },
+    template: TEMPLATE, meetingId: 'm1', meetingTitle: 'Demo', startT: Date.now(), log: { log() {}, error() {} } });
+  f.onUtterance(utt('let us fix the broken export button on invoices', Date.now()));
+  const firstTick = f.tick(); // runSession is now awaiting `gate` — first tick is in flight
+  f.onUtterance(utt('let us also fix the broken import button on invoices', Date.now()));
+  await f.tick(); // must return immediately without spawning a second session
+  assert.strictEqual(spawned, 1, 'a slow first tick must block a concurrent second spawn');
+  resolveSession();
+  await firstTick;
+  assert.strictEqual(spawned, 1, 'the second utterance stayed in pending and did not spawn on its own');
+  await f.tick(); // now the first tick is done; this drains the still-pending candidate
+  assert.strictEqual(spawned, 2);
+});
+
 test('caps: when events budget is exhausted, tick() drains candidates without spawning', async () => {
   const dir = mkSession();
   let spawned = 0;
