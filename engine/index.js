@@ -13,7 +13,7 @@ const { createStream } = require('./deepgram');
 const { startCaptureServer } = require('./capture-server');
 const { createFiring } = require('./firing');
 const { createCaps } = require('./caps');
-const { runClaude, EVENT_TOOLS } = require('./claude');
+const { runClaude, DENY_TOOLS } = require('./claude');
 
 // ── pure helpers (exported for tests) ───────────────────────────────────────
 function shouldAutoStop({ now, startT, lastUtteranceT, captureStartedT, cfg }) {
@@ -70,7 +70,8 @@ async function start(flags) {
   const caps = createCaps(path.join(sessionDir, 'state'), cfg.caps);
   const firing = createFiring({
     sessionDir, config: cfg, caps, template, meetingId, meetingTitle: title, startT, notesDir,
-    runSession: (prompt) => runClaude({ prompt, model: cfg.models.events, allowedTools: EVENT_TOOLS, cwd: notesDir }),
+    // Data-only session: NO tools (DENY_TOOLS turns them off). The engine does gh/git/fs itself.
+    runSession: (prompt) => runClaude({ prompt, model: cfg.models.events, disallowedTools: DENY_TOOLS }),
   });
 
   let mic = null, sys = null, captureStartedT = null, lastUtteranceT = null;
