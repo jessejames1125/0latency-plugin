@@ -1,0 +1,7 @@
+{
+  "name": "0latency-marketplace",
+  "owner": { "name": "Jesse Cook" },
+  "plugins": [
+    { "name": "0l", "source": "./", "description": "0latency: live walkthrough capture -> grounded GitHub issues" }
+  ]
+}
