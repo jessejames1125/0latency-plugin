@@ -1,0 +1,13 @@
+{
+  "name": "0latency-plugin",
+  "version": "0.1.0",
+  "description": "0latency capture engine + Claude Code plugin: live walkthrough -> grounded GitHub issues",
+  "main": "engine/index.js",
+  "scripts": {
+    "test": "node --test \"test/*.test.js\"",
+    "preflight": "node engine/preflight.js"
+  },
+  "dependencies": {
+    "ws": "^8.18.0"
+  }
+}

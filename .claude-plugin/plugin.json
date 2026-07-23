@@ -1,0 +1,6 @@
+{
+  "name": "0l",
+  "version": "0.1.0",
+  "description": "Live meeting capture -> frame-grounded GitHub issues, automatically. One operator, /0l:start to /0l:finish.",
+  "author": { "name": "Jesse Cook", "email": "jessejames1125@gmail.com" }
+}
