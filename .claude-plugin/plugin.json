@@ -1,6 +1,23 @@
 {
   "name": "0l",
+  "displayName": "0latency",
   "version": "0.1.0",
-  "description": "Live meeting capture -> frame-grounded GitHub issues, automatically. One operator, /0l:start to /0l:finish.",
-  "author": { "name": "Jesse Cook", "email": "jessejames1125@gmail.com" }
+  "description": "Turn what you say in a live product walkthrough into frame-grounded GitHub issues, while the meeting is still going. One operator, /0l:start to /0l:finish.",
+  "author": {
+    "name": "Jesse Cook",
+    "email": "jessejames1125@gmail.com",
+    "url": "https://github.com/jessejames1125"
+  },
+  "homepage": "https://github.com/jessejames1125/0latency-plugin#readme",
+  "repository": "https://github.com/jessejames1125/0latency-plugin",
+  "license": "Apache-2.0",
+  "keywords": [
+    "meetings",
+    "transcription",
+    "github-issues",
+    "product-walkthrough",
+    "screen-capture",
+    "bug-triage",
+    "productivity"
+  ]
 }

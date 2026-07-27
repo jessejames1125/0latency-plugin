@@ -1,11 +1,39 @@
 {
   "name": "0latency-plugin",
   "version": "0.1.0",
-  "description": "0latency capture engine + Claude Code plugin: live walkthrough -> grounded GitHub issues",
+  "description": "Claude Code plugin: turn what you say in a live product walkthrough into frame-grounded GitHub issues, while the meeting is still going.",
+  "keywords": [
+    "claude-code",
+    "claude-code-plugin",
+    "meetings",
+    "transcription",
+    "deepgram",
+    "github-issues",
+    "product-walkthrough",
+    "screen-capture",
+    "developer-tools"
+  ],
+  "homepage": "https://github.com/jessejames1125/0latency-plugin#readme",
+  "bugs": {
+    "url": "https://github.com/jessejames1125/0latency-plugin/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/jessejames1125/0latency-plugin.git"
+  },
+  "license": "Apache-2.0",
+  "author": {
+    "name": "Jesse Cook",
+    "email": "jessejames1125@gmail.com"
+  },
   "main": "engine/index.js",
+  "engines": {
+    "node": ">=20"
+  },
   "scripts": {
     "test": "node --test \"test/*.test.js\"",
-    "preflight": "node engine/preflight.js"
+    "preflight": "node engine/preflight.js",
+    "leak-check": "bash scripts/leak-check.sh"
   },
   "dependencies": {
     "ws": "^8.18.0"
