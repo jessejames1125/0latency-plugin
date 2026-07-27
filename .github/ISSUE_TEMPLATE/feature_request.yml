@@ -1,0 +1,33 @@
+name: Feature request
+description: Suggest a change. Start with the problem, not the solution.
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Worth reading [CONTEXT.md](https://github.com/jessejames1125/0latency-plugin/blob/main/CONTEXT.md)
+        first — it lists the deliberate non-goals. A request that lands in one of them
+        isn't wasted, but it will get a slower answer.
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: What problem are you hitting?
+      description: What happened in a real meeting that made you want this?
+    validations:
+      required: true
+
+  - type: textarea
+    id: workaround
+    attributes:
+      label: What do you do about it today?
+      description: If nothing, say so — that's useful signal.
+    validations:
+      required: false
+
+  - type: textarea
+    id: proposal
+    attributes:
+      label: What would you want instead?
+    validations:
+      required: false

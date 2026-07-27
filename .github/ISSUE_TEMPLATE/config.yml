@@ -1,0 +1,16 @@
+# Blank issues stay enabled on purpose: the /0l:report command opens a prefilled blank
+# issue, and disabling them would break that flow.
+blank_issues_enabled: true
+
+contact_links:
+  - name: Report a security vulnerability
+    url: https://github.com/jessejames1125/0latency-plugin/security/advisories/new
+    about: Please report security problems privately, not as a public issue. See SECURITY.md.
+
+  - name: Is this plugin right for my team?
+    url: https://github.com/jessejames1125/0latency-plugin/blob/main/CONTEXT.md
+    about: What it does, who it fits, and who it doesn't — read this before filing a question.
+
+  - name: Setup and troubleshooting
+    url: https://github.com/jessejames1125/0latency-plugin/blob/main/README.md#troubleshooting
+    about: Most first-run problems are the tab-audio share step. Check here first, or run /0l:help.

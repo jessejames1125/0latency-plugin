@@ -5,3 +5,7 @@ sessions/
 
 # stray test-output redirects (Windows-path names from Git Bash)
 *task-*-test-output.txt
+
+# Local-only extra patterns for scripts/leak-check.sh. Deliberately untracked: the
+# denylist would otherwise publish the very strings it exists to keep private.
+.leak-denylist

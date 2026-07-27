@@ -1,0 +1,87 @@
+name: Bug report
+description: Something behaved differently than documented.
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        **This repository is public.** Please do not paste meeting transcripts, engine
+        logs, `~/.0latency/config.json`, internal repo names, or API keys. Describe the
+        behavior and the error message instead.
+
+        Tip: `/0l:report` inside Claude Code collects the safe diagnostics for you.
+
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened
+      description: One or two sentences.
+    validations:
+      required: true
+
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      description: Which command, and what you were doing at the time.
+      placeholder: |
+        1. Ran /0l:start ...
+        2. Shared the Meet tab with tab audio ticked
+        3. ...
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected vs actual
+    validations:
+      required: true
+
+  - type: input
+    id: version
+    attributes:
+      label: Plugin version
+      description: The `version` field in the plugin's package.json.
+      placeholder: "0.1.0"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: os
+    attributes:
+      label: Operating system
+      options:
+        - Windows
+        - macOS
+        - Linux
+    validations:
+      required: true
+
+  - type: input
+    id: node
+    attributes:
+      label: Node version
+      placeholder: "v22.11.0"
+    validations:
+      required: true
+
+  - type: input
+    id: browser
+    attributes:
+      label: Browser used for capture
+      placeholder: "Chrome 141"
+    validations:
+      required: false
+
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Before filing
+      options:
+        - label: I shared a **browser tab** with **"Also share tab audio"** ticked (not a screen or window).
+          required: false
+        - label: I checked the Troubleshooting table in the README.
+          required: false
+        - label: This report contains no transcripts, logs, keys, or internal repo names.
+          required: true
