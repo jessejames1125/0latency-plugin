@@ -5,7 +5,6 @@
   "description": "Turn what you say in a live product walkthrough into frame-grounded GitHub issues, while the meeting is still going. One operator, /0l:start to /0l:finish.",
   "author": {
     "name": "Jesse Cook",
-    "email": "jessejames1125@gmail.com",
     "url": "https://github.com/jessejames1125"
   },
   "homepage": "https://github.com/jessejames1125/0latency-plugin#readme",

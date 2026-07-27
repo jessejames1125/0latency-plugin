@@ -24,7 +24,7 @@
   "license": "Apache-2.0",
   "author": {
     "name": "Jesse Cook",
-    "email": "jessejames1125@gmail.com"
+    "url": "https://github.com/jessejames1125"
   },
   "main": "engine/index.js",
   "engines": {

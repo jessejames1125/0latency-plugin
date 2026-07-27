@@ -63,9 +63,11 @@ Honest limits:
 
 **Please do not open a public issue for a security problem.**
 
-- Preferred: GitHub's private vulnerability reporting — the **Security** tab on this
-  repository → *Report a vulnerability*.
-- Alternatively: email **jessejames1125@gmail.com** with `0l security` in the subject.
+Use **GitHub's private vulnerability reporting**: the **Security** tab on this repository
+→ *Report a vulnerability*. It's enabled, it's private, and it goes straight to me.
+
+If that's unavailable to you for some reason, open a public issue saying only *"I have a
+security report, please open a channel"* — with **no details** — and I'll follow up.
 
 Include what you did, what happened, and what you expected. A proof of concept helps.
 

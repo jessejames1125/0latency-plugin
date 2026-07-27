@@ -43,6 +43,9 @@ SECRET_PATTERNS=(
 
 # Content that belongs in private notes, not in a public tool repository.
 PRIVATE_PATTERNS=(
+  # Personal email addresses. Contact routes through GitHub — issues, private advisories,
+  # and the profile link — so a personal inbox never has to be published and scraped.
+  '[A-Za-z0-9._%+-]+@(gmail|googlemail|yahoo|hotmail|outlook|live|icloud|aol|protonmail|proton)\.(com|me)'
   'outreach'
   'prospect'
   'waitlist'
