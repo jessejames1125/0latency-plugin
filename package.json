@@ -1,6 +1,6 @@
 {
   "name": "0latency-plugin",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Claude Code plugin: turn what you say in a live product walkthrough into frame-grounded GitHub issues, while the meeting is still going.",
   "keywords": [
     "claude-code",

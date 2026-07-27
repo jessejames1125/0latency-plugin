@@ -6,6 +6,11 @@ All notable changes to this project are documented here. Format follows
 
 ## [Unreleased]
 
+## [0.1.1] — 2026-07-27
+
+Distribution release. No functional change to the engine — this makes the project
+adoptable by someone who isn't already me.
+
 ### Added
 
 - `LICENSE` — Apache-2.0. The repository was previously public with no license, which made
@@ -20,6 +25,12 @@ All notable changes to this project are documented here. Format follows
   private material out of a public repository.
 - Package and plugin manifests now declare `license`, `repository`, `homepage`, `keywords`,
   and a supported Node range.
+
+### Changed
+
+- Version bumped to 0.1.1 so existing installs actually receive the above. The marketplace
+  entry pins an explicit `version`, and Claude Code only ships updates when that string
+  changes — leaving it at 0.1.0 would have kept the license out of everyone's hands.
 
 ## [0.1.0] — 2026-07-23
 
@@ -61,5 +72,6 @@ First release.
 - Capture pause/resume, Windows process spawning, missing error listeners, a tail-read
   loop, and overlapping timer ticks.
 
-[Unreleased]: https://github.com/jessejames1125/0latency-plugin/compare/v0.1.0...HEAD
+[Unreleased]: https://github.com/jessejames1125/0latency-plugin/compare/v0.1.1...HEAD
+[0.1.1]: https://github.com/jessejames1125/0latency-plugin/compare/v0.1.0...v0.1.1
 [0.1.0]: https://github.com/jessejames1125/0latency-plugin/releases/tag/v0.1.0

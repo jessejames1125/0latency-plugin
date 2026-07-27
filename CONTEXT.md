@@ -128,7 +128,7 @@ that. See [SECURITY.md](SECURITY.md).
 
 ## Status and limitations
 
-**v0.1.0 — early.** The engine has 60 unit tests covering capture, transcription
+**v0.1.1 — early.** The engine has 60 unit tests covering capture, transcription
 handling, the finding gate, caps, issue filing, and the safety constraints, and they run
 green with no API keys. That is not the same as being hardened across every meeting setup
 in the world. Expect rough edges on first run; the [issue tracker](https://github.com/jessejames1125/0latency-plugin/issues)

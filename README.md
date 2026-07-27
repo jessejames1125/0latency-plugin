@@ -199,7 +199,7 @@ describe the behavior and the error, and I'll take it from there.
 
 ## Project status
 
-**v0.1.0 — early.** 60 tests cover the engine and run green with no API keys, on Windows
+**v0.1.1 — early.** 60 tests cover the engine and run green with no API keys, on Windows
 and Linux, Node 20 and 22. That isn't the same as being hardened against every meeting
 setup out there, so expect rough edges on a first run, and please file them.
 

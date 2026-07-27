@@ -43,7 +43,7 @@ body:
     attributes:
       label: Plugin version
       description: The `version` field in the plugin's package.json.
-      placeholder: "0.1.0"
+      placeholder: "0.1.1"
     validations:
       required: true
 

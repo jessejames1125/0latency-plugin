@@ -11,7 +11,7 @@
       "name": "0l",
       "source": "./",
       "displayName": "0latency",
-      "version": "0.1.0",
+      "version": "0.1.1",
       "description": "Turn what you say in a live product walkthrough into frame-grounded GitHub issues, while the meeting is still going. One operator, /0l:start to /0l:finish.",
       "author": {
         "name": "Jesse Cook",
