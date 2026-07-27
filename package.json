@@ -31,7 +31,7 @@
     "node": ">=20"
   },
   "scripts": {
-    "test": "node --test \"test/*.test.js\"",
+    "test": "node --test",
     "preflight": "node engine/preflight.js",
     "leak-check": "bash scripts/leak-check.sh"
   },

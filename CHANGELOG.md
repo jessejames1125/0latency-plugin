@@ -26,6 +26,15 @@ adoptable by someone who isn't already me.
 - Package and plugin manifests now declare `license`, `repository`, `homepage`, `keywords`,
   and a supported Node range.
 
+### Fixed
+
+- `npm test` on Node 20. The script was `node --test "test/*.test.js"`, which depends on
+  glob expansion inside the test runner — that only arrived in Node 22, so on Node 20 the
+  pattern was read as a literal path and no tests ran at all. Now `node --test`, using the
+  runner's default discovery, which works from Node 18 up. The engine always supported
+  Node 20 (preflight checks for it); only the test script didn't. Caught by the new CI
+  matrix on its first run.
+
 ### Changed
 
 - Version bumped to 0.1.1 so existing installs actually receive the above. The marketplace
