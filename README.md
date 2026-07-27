@@ -1,11 +1,62 @@
 # 0latency (`0l`) — turn what you *say* in a walkthrough into GitHub issues, live
 
+[![CI](https://github.com/jessejames1125/0latency-plugin/actions/workflows/ci.yml/badge.svg)](https://github.com/jessejames1125/0latency-plugin/actions/workflows/ci.yml)
+[![License: Apache-2.0](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](LICENSE)
+[![Claude Code plugin](https://img.shields.io/badge/Claude%20Code-plugin-6d4aff.svg)](https://code.claude.com/docs/en/plugins)
+
 You run a product walkthrough. Someone says *"the export button on invoices is broken."*
 Normally that line lives in a transcript nobody reads. **0latency hears it, grabs the
 screenshot you were looking at, and files a grounded GitHub issue — while the meeting is still
 going.** One person runs it; everyone else just talks.
 
 New here? Run **`/0l:help`** inside Claude Code any time for a friendly walkthrough.
+
+---
+
+## Is this for you?
+
+The qualifier is one question: **does your team run product walkthroughs?** Sprint demo,
+design review, bug bash, QA walking a build, two founders demoing to each other — any call
+where someone drives the product and other people react to it.
+
+You'll also need: **GitHub Issues**, **Claude Code**, a meeting in a **browser tab**, and
+**Chrome / Chromium / Edge**.
+
+**It's the wrong tool if** you track work in Jira or Linear, meet in a native desktop app,
+use Safari or Firefox, or can't send meeting audio to a transcription service.
+
+→ **[CONTEXT.md](CONTEXT.md)** has the full picture: the problem, the fit, the honest
+non-fits, what it touches, and what it costs. Worth two minutes before you install.
+
+---
+
+## What comes out
+
+An issue in your repo, filed during the meeting, pinned to the frame that was on screen
+when the remark was made. Shape (illustrative):
+
+```markdown
+## Finding
+> "the export button on invoices is broken" — Priya, 00:14:22
+
+Export on the invoices list does nothing on click. No network request fires.
+
+## Evidence
+![frame](https://raw.githubusercontent.com/you/notes/<sha>/frames/0042.png)
+
+### Frame (for agents)
+- repo: you/notes
+- sha: <sha>
+- path: frames/0042.png
+
+## Ground rules
+Claim by assigning yourself. Post progress on this issue, not in chat.
+Filed automatically by 0latency during "Weekly product review".
+```
+
+The frame is committed to a notes repo you own and referenced by SHA, so the image can't
+drift out from under the issue. The body is assembled by the engine, not written freehand
+by a model.
 
 ---
 
@@ -130,7 +181,7 @@ Still stuck? Run **`/0l:help`** in Claude Code, or read `<SESSION_DIR>/engine.lo
 
 ---
 
-## Found a bug? Tell us
+## Found a bug? Tell me
 
 - **`/0l:report`** — the easiest way. It collects safe diagnostics (version, OS, node), asks
   what went wrong, and opens a prefilled GitHub issue for you to review and submit. It will
@@ -139,4 +190,30 @@ Still stuck? Run **`/0l:help`** in Claude Code, or read `<SESSION_DIR>/engine.lo
 - Or file it by hand: **[github.com/jessejames1125/0latency-plugin/issues](https://github.com/jessejames1125/0latency-plugin/issues)**.
 
 When reporting, please **don't paste meeting transcripts, repo-internal details, or API keys** —
-describe the behavior and the error, and we'll take it from there.
+describe the behavior and the error, and I'll take it from there.
+
+**Security problems**: please report those privately instead — see
+[SECURITY.md](SECURITY.md).
+
+---
+
+## Project status
+
+**v0.1.0 — early.** 60 tests cover the engine and run green with no API keys, on Windows
+and Linux, Node 20 and 22. That isn't the same as being hardened against every meeting
+setup out there, so expect rough edges on a first run, and please file them.
+
+This is a side project, built and maintained by one person in spare hours. Issues get
+read; response time varies.
+
+---
+
+## Contributing
+
+Bug reports and "this didn't work on my setup" reports are the most useful thing you can
+send. See [CONTRIBUTING.md](CONTRIBUTING.md) for setup, house rules, and how to run the
+tests.
+
+## License
+
+[Apache-2.0](LICENSE). Use it, fork it, ship it inside your company.
